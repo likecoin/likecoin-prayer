@@ -1,0 +1,32 @@
+{
+  "name": "likecoin-prayer",
+  "version": "1.0.0",
+  "description": "likecoin payment service",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm lint",
+    "lint": "eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/likecoin/likecoin-prayer.git"
+  },
+  "author": "William Chong",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/likecoin/likecoin-prayer/issues"
+  },
+  "homepage": "https://github.com/likecoin/likecoin-prayer#readme",
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.9.0"
+  },
+  "dependencies": {
+    "@google-cloud/pubsub": "^0.18.0",
+    "bignumber.js": "^6.0.0",
+    "firebase-admin": "^5.11.0",
+    "uuid": "^3.2.1",
+    "web3": "^1.0.0-beta.33"
+  }
+}
