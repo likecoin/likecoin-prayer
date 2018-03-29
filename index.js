@@ -21,22 +21,23 @@ function makeNewRecevier(wallet, user) {
     wallet,
     user,
     payoutIds: [],
-    amount: new BigNumber(0),
+    value: new BigNumber(0),
   };
 }
 
 async function handleQuery(docs) {
   const senderMap = {};
-  docs.forEach((d) => {
-    if (!d.amount) {
-      console.error(`${d.id} has not amount`);
+  docs.forEach((ref) => {
+    const d = ref.data();
+    if (!d.value) {
+      console.error(`${ref.id} has not value`);
       return;
     }
     if (!senderMap[d.to]) {
       senderMap[d.to] = makeNewRecevier(d.to, d.toId);
     }
-    senderMap[d.to].payoutIds.push(d.id);
-    senderMap[d.to].amount.plus(d.amount);
+    senderMap[d.to].payoutIds.push(ref.id);
+    senderMap[d.to].value = senderMap[d.to].value.plus(new BigNumber(d.value));
   });
   const receivers = Object.keys(senderMap);
   for (let i = 0; i < receivers.length; i += 1) {
@@ -46,8 +47,8 @@ async function handleQuery(docs) {
       const {
         user,
         payoutIds,
-        amount,
-        account,
+        value,
+        delegatorAccount,
       } = data;
       await db.runTransaction(t => Promise.all(payoutIds.map(async (payoutId) => {
         const ref = payoutRef.doc(payoutId);
@@ -59,7 +60,7 @@ async function handleQuery(docs) {
           txHash: 'pending',
         });
       }))));
-      const methodCall = LikeCoin.methods.transfer(wallet, amount);
+      const methodCall = LikeCoin.methods.transfer(wallet, value);
       const txData = methodCall.encodeABI();
       const {
         tx,
@@ -70,26 +71,33 @@ async function handleQuery(docs) {
         LIKECOIN.LIKE_COIN_ADDRESS,
         txData,
       );
-      const currentBlock = await web3.eth.getBlockNumber();
-      await logPayoutTx({
-        txHash,
-        from: delegatorAddress,
-        to: wallet,
-        value: amount,
-        fromId: account || delegatorAddress,
-        toId: user,
-        currentBlock,
-        nonce: pendingCount,
-        rawSignedTx: tx.rawTransaction,
-        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
+      let batch = db.batch();
+      payoutIds.forEach((payoutId) => {
+        const ref = payoutRef.doc(payoutId);
+        batch.update(ref, { txHash });
       });
-
-      const batch = db.batch();
+      batch.commit();
+      batch = db.batch();
       payoutIds.forEach((payoutId) => {
         const ref = userRef.doc(user).collection('bonus').doc(payoutId);
         batch.update(ref, { txHash });
       });
       await batch.commit();
+      const currentBlock = await web3.eth.getBlockNumber();
+      await logPayoutTx({
+        txHash,
+        from: delegatorAddress,
+        to: wallet,
+        value: value.toString(),
+        fromId: delegatorAccount || delegatorAddress,
+        toId: user,
+        currentBlock,
+        nonce: pendingCount,
+        rawSignedTx: tx.rawTransaction,
+        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
+        remarks: 'Bonus',
+      });
+
     } catch (err) {
       console.log(err); // disable-eslint-line no-console
     }
@@ -99,14 +107,15 @@ async function handleQuery(docs) {
 async function loop() {
   while (true) {
     try {
-      const query = payoutRef.where('waitForClaim', '==', false)
-        .where('effectiveTs`', '>', Date.now())
+      const query = await payoutRef.where('waitForClaim', '==', false)
+        .where('effectiveTs', '<', Date.now())
         .where('txHash', '==', null)
-        .limit(250);
-      await handleQuery(query.get().docs);
+        .limit(250).get();
+      await handleQuery(query.docs);
       await timeout(config.POLLING_DELAY || 10000);
     } catch (err) {
       console.error(err);
+      await timeout(config.POLLING_DELAY || 10000);
     }
   }
 }
