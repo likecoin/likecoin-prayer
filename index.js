@@ -7,6 +7,7 @@ const {
   userCollection: userRef,
   payoutCollection: payoutRef,
 } = require('./util/firebase');
+const { logPayoutTx } = require('./util/logger');
 
 const config = require('./config/config.js');
 const LikeCoin = new web3.eth.Contract(LIKECOIN.LIKE_COIN_ABI, LIKECOIN.LIKE_COIN_ADDRESS);
@@ -69,7 +70,26 @@ async function handleQuery(docs) {
         LIKECOIN.LIKE_COIN_ADDRESS,
         txData,
       );
+      const currentBlock = await web3.eth.getBlockNumber();
+      await logPayoutTx({
+        txHash,
+        from: delegatorAddress,
+        to: wallet,
+        value: amount,
+        fromId: account || delegatorAddress,
+        toId: user,
+        currentBlock,
+        nonce: pendingCount,
+        rawSignedTx: tx.rawTransaction,
+        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
+      });
 
+      const batch = db.batch();
+      payoutIds.forEach((payoutId) => {
+        const ref = userRef.doc(user).collection('bonus').doc(payoutId);
+        batch.update(ref, { txHash });
+      });
+      await batch.commit();
     } catch (err) {
       console.log(err); // disable-eslint-line no-console
     }
