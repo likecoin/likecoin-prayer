@@ -10,7 +10,7 @@ async function logPayoutTx(payload) {
       ...payload,
     });
   } catch (err) {
-    console.error(err); // disable-eslint-line no-console
+    console.error('logPayoutTx():', err); // eslint-disable-line no-console
   }
 }
 

@@ -1,5 +1,4 @@
 const admin = require('firebase-admin');
-const { FieldValue } = require('firebase-admin').firestore;
 
 const config = require('../config/config.js');
 const serviceAccount = require('../config/serviceAccountKey.json');

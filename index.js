@@ -8,8 +8,8 @@ const {
   payoutCollection: payoutRef,
 } = require('./util/firebase');
 const { logPayoutTx } = require('./util/logger');
-
 const config = require('./config/config.js');
+
 const LikeCoin = new web3.eth.Contract(LIKECOIN.LIKE_COIN_ABI, LIKECOIN.LIKE_COIN_ADDRESS);
 
 function timeout(ms) {
@@ -30,7 +30,7 @@ async function handleQuery(docs) {
   docs.forEach((ref) => {
     const d = ref.data();
     if (!d.value) {
-      console.error(`${ref.id} has not value`);
+      console.error(`handleQuery(): ${ref.id} has no value`); // eslint-disable-line no-console
       return;
     }
     if (!senderMap[d.to]) {
@@ -97,24 +97,24 @@ async function handleQuery(docs) {
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
         remarks: 'Bonus',
       });
-
     } catch (err) {
-      console.log(err); // disable-eslint-line no-console
+      console.error('handleQuery()', err); // eslint-disable-line no-console
     }
   }
 }
 
 async function loop() {
-  while (true) {
+  while (true) { // eslint-disable-line no-constant-condition
     try {
       const query = await payoutRef.where('waitForClaim', '==', false)
         .where('effectiveTs', '<', Date.now())
         .where('txHash', '==', null)
-        .limit(250).get();
+        .limit(250)
+        .get();
       await handleQuery(query.docs);
-      await timeout(config.POLLING_DELAY || 10000);
     } catch (err) {
-      console.error(err);
+      console.error('loop():', err); // eslint-disable-line no-console
+    } finally {
       await timeout(config.POLLING_DELAY || 10000);
     }
   }

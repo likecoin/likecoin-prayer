@@ -54,7 +54,7 @@ async function sendTransactionWithLoop(addr, txData) {
   try {
     txHash = await sendTransaction(tx);
   } catch (err) {
-    console.log(`Nonce ${pendingCount} failed, trying web3 pending`); // disable-eslint-line no-console
+    console.log(`Nonce ${pendingCount} failed, trying web3 pending`); // eslint-disable-line no-console
   }
   while (!txHash) {
     /* eslint-disable no-await-in-loop */
