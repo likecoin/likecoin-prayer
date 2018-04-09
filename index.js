@@ -8,8 +8,11 @@ const {
   payoutCollection: payoutRef,
 } = require('./util/firebase');
 const { logPayoutTx } = require('./util/logger');
+const publisher = require('./util/gcloudPub');
 const config = require('./config/config.js');
 
+const PUBSUB_TOPIC_MISC = 'misc';
+const ONE_LIKE = new BigNumber(10).pow(18);
 const LikeCoin = new web3.eth.Contract(LIKECOIN.LIKE_COIN_ABI, LIKECOIN.LIKE_COIN_ADDRESS);
 
 function timeout(ms) {
@@ -96,6 +99,19 @@ async function handleQuery(docs) {
         rawSignedTx: tx.rawTransaction,
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
         remarks: 'Bonus',
+      });
+      publisher.publish(PUBSUB_TOPIC_MISC, null, {
+        logType: 'eventPayout',
+        fromUser: delegatorAccount || delegatorAddress,
+        fromWallet: delegatorAddress,
+        toUser: user,
+        toWallet: wallet,
+        likeAmount: value.dividedBy(ONE_LIKE).toNumber(),
+        likeAmountUnitStr: value.toString(),
+        txHash,
+        txStatus: 'pending',
+        txNonce: pendingCount,
+        currentBlock,
       });
     } catch (err) {
       console.error('handleQuery()', err); // eslint-disable-line no-console
