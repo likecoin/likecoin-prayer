@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "npm lint",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "start": "node index.js",
+    "dev": "IS_TESTNET=TRUE node index.js"
   },
   "repository": {
     "type": "git",
