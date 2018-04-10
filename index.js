@@ -80,12 +80,6 @@ async function handleQuery(docs) {
         batch.update(ref, { txHash });
       });
       batch.commit();
-      batch = db.batch();
-      payoutIds.forEach((payoutId) => {
-        const ref = userRef.doc(user).collection('bonus').doc(payoutId);
-        batch.update(ref, { txHash });
-      });
-      await batch.commit();
       const currentBlock = await web3.eth.getBlockNumber();
       await logPayoutTx({
         txHash,
@@ -100,6 +94,12 @@ async function handleQuery(docs) {
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
         remarks: 'Bonus',
       });
+      batch = db.batch();
+      payoutIds.forEach((payoutId) => {
+        const ref = userRef.doc(user).collection('bonus').doc(payoutId);
+        batch.update(ref, { txHash });
+      });
+      await batch.commit();
       publisher.publish(PUBSUB_TOPIC_MISC, null, {
         logType: 'eventPayout',
         fromUser: delegatorAccount || delegatorAddress,
