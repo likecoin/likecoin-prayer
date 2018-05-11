@@ -51,8 +51,12 @@ function stopPoller() {
   }
 }
 
+function getGasPrice() {
+  return gasPrice;
+}
+
 module.exports = {
-  gasPrice,
+  getGasPrice,
   startPoller,
   stopPoller,
 };
