@@ -3,7 +3,7 @@ const {
   txCollection: txLogRef,
 } = require('./firebase');
 const publisher = require('./gcloudPub');
-const { gasPrice } = require('./poller');
+const { getGasPrice } = require('./poller');
 
 const Web3 = require('web3');
 
@@ -39,7 +39,7 @@ async function signTransaction(addr, txData, pendingCount) {
     to: addr,
     nonce: pendingCount,
     data: txData,
-    gasPrice,
+    gasPrice: getGasPrice(),
     gas: gasLimit,
   }, privateKey);
 }

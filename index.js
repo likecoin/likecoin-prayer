@@ -137,5 +137,5 @@ async function loop() {
   }
 }
 
-loop();
 startPoller();
+loop();
