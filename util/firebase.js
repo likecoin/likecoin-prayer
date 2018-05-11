@@ -8,6 +8,7 @@ if (process.env.CI) {
     userCollection: {},
     txCollection: {},
     payoutCollection: {},
+    configCollection: {},
   };
 } else {
   admin.initializeApp({
@@ -18,11 +19,13 @@ if (process.env.CI) {
   const userCollection = db.collection(config.FIRESTORE_USER_ROOT);
   const txCollection = db.collection(config.FIRESTORE_TX_ROOT);
   const payoutCollection = db.collection(config.FIRESTORE_PAYOUT_ROOT);
+  const configCollection = db.collection(config.FIRESTORE_CONFIG_ROOT);
 
   module.exports = {
     db,
     userCollection,
     txCollection,
     payoutCollection,
+    configCollection,
   };
 }

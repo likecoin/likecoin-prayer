@@ -10,6 +10,7 @@ const {
 const { logPayoutTx } = require('./util/logger');
 const publisher = require('./util/gcloudPub');
 const config = require('./config/config.js');
+const { startPoller } = require('./util/poller');
 
 const PUBSUB_TOPIC_MISC = 'misc';
 const ONE_LIKE = new BigNumber(10).pow(18);
@@ -137,3 +138,4 @@ async function loop() {
 }
 
 loop();
+startPoller();

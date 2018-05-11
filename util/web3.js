@@ -3,6 +3,7 @@ const {
   txCollection: txLogRef,
 } = require('./firebase');
 const publisher = require('./gcloudPub');
+const { gasPrice } = require('./poller');
 
 const Web3 = require('web3');
 
@@ -14,7 +15,6 @@ const accounts = require('../config/accounts.js');
 const {
   address,
   privateKey,
-  gasPrice,
   gasLimit,
 } = accounts[0];
 
