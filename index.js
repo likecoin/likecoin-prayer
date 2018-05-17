@@ -113,6 +113,7 @@ async function handleQuery(docs) {
         txStatus: 'pending',
         txNonce: pendingCount,
         currentBlock,
+        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
       });
     } catch (err) {
       console.error('handleQuery()', err); // eslint-disable-line no-console
