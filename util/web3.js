@@ -45,7 +45,7 @@ async function signTransaction(addr, txData, pendingCount) {
 }
 
 async function sendTransactionWithLoop(addr, txData) {
-  const counterRef = txLogRef.doc('!counter');
+  const counterRef = txLogRef.doc(`!counter_${address}`);
   let pendingCount = await db.runTransaction(t => t.get(counterRef).then((d) => {
     const v = d.data().value + 1;
     t.update(counterRef, { value: v });
