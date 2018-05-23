@@ -101,12 +101,19 @@ async function handleQuery(docs) {
         batch.update(ref, { txHash });
       });
       await batch.commit();
+      const receiverDoc = await userRef.doc(user).get();
+      const {
+        referrer: toReferrer,
+        timestamp: toRegisterTime,
+      } = receiverDoc.data();
       publisher.publish(PUBSUB_TOPIC_MISC, null, {
         logType: 'eventPayout',
         fromUser: delegatorAccount || delegatorAddress,
         fromWallet: delegatorAddress,
         toUser: user,
         toWallet: wallet,
+        toReferrer,
+        toRegisterTime,
         likeAmount: value.dividedBy(ONE_LIKE).toNumber(),
         likeAmountUnitStr: value.toString(),
         txHash,
