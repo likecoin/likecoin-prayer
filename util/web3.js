@@ -10,13 +10,19 @@ const Web3 = require('web3');
 const PUBSUB_TOPIC_MISC = 'misc';
 const INFURA_HOST = process.env.IS_TESTNET ? 'https://rinkeby.infura.io/0nSXv3EyFEKw7Alq0z4c' : 'https://mainnet.infura.io/0nSXv3EyFEKw7Alq0z4c';
 const web3 = new Web3(new Web3.providers.HttpProvider(INFURA_HOST));
+const config = require('../config/config.js');
 const accounts = require('../config/accounts.js');
+
+let targetAccount = accounts[0];
+if (config.ACCOUNT_INDEX_OVERRIDE) {
+  targetAccount = accounts[config.ACCOUNT_INDEX_OVERRIDE] || accounts[0];
+}
 
 const {
   address,
   privateKey,
   gasLimit,
-} = accounts[0];
+} = targetAccount;
 
 function timeout(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
