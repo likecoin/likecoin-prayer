@@ -75,7 +75,7 @@ async function handleQuery(docs) {
         LIKECOIN.LIKE_COIN_ADDRESS,
         txData,
       );
-      let batch = db.batch();
+      const batch = db.batch();
       payoutIds.forEach((payoutId) => {
         const ref = payoutRef.doc(payoutId);
         batch.update(ref, { txHash });
@@ -95,12 +95,6 @@ async function handleQuery(docs) {
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
         remarks: 'Bonus',
       });
-      batch = db.batch();
-      payoutIds.forEach((payoutId) => {
-        const ref = userRef.doc(user).collection('bonus').doc(payoutId);
-        batch.update(ref, { txHash });
-      });
-      await batch.commit();
       const receiverDoc = await userRef.doc(user).get();
       const {
         referrer: toReferrer,
