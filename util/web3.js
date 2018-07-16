@@ -5,6 +5,7 @@ const {
 const publisher = require('./gcloudPub');
 const { getGasPrice } = require('./poller');
 
+const BigNumber = require('bignumber.js');
 const Web3 = require('web3');
 
 const PUBSUB_TOPIC_MISC = 'misc';
@@ -41,11 +42,13 @@ function sendTransaction(tx) {
 }
 
 async function signTransaction(addr, txData, pendingCount) {
+  const networkGas = await web3.eth.getGasPrice();
+  const gasPrice = BigNumber.min(getGasPrice(), networkGas).toString();
   return web3.eth.accounts.signTransaction({
     to: addr,
     nonce: pendingCount,
     data: txData,
-    gasPrice: getGasPrice(),
+    gasPrice,
     gas: gasLimit,
   }, privateKey);
 }
