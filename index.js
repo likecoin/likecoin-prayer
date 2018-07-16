@@ -70,6 +70,7 @@ async function handleQuery(docs) {
         tx,
         txHash,
         pendingCount,
+        gasPrice,
         delegatorAddress,
       } = await sendTransactionWithLoop(
         LIKECOIN.LIKE_COIN_ADDRESS,
@@ -113,6 +114,7 @@ async function handleQuery(docs) {
         txHash,
         txStatus: 'pending',
         txNonce: pendingCount,
+        gasPrice,
         currentBlock,
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
       });
