@@ -73,7 +73,7 @@ async function sendTransactionWithLoop(addr, txData) {
   /* eslint-disable no-await-in-loop */
   do {
     retry = false;
-    tx = await signTransaction(addr, txData, pendingCount, gasPrice, gasLimit, privateKey);
+    tx = await signTransaction(addr, txData, pendingCount, gasPrice);
     try {
       txHash = await sendTransaction(tx);
     } catch (err) {
@@ -91,7 +91,7 @@ async function sendTransactionWithLoop(addr, txData) {
     while (!txHash) {
       /* eslint-disable no-await-in-loop */
       pendingCount = await web3.eth.getTransactionCount(address, 'pending');
-      tx = await signTransaction(addr, txData, pendingCount);
+      tx = await signTransaction(addr, txData, pendingCount, gasPrice);
       txHash = await sendTransaction(tx);
       if (!txHash) {
         await timeout(200);
