@@ -1,12 +1,12 @@
+const BigNumber = require('bignumber.js');
+const Web3 = require('web3');
+
 const {
   db,
   txCollection: txLogRef,
 } = require('./firebase');
 const publisher = require('./gcloudPub');
 const { getGasPrice } = require('./poller');
-
-const BigNumber = require('bignumber.js');
-const Web3 = require('web3');
 
 const PUBSUB_TOPIC_MISC = 'misc';
 const INFURA_HOST = process.env.IS_TESTNET ? 'https://rinkeby.infura.io/0nSXv3EyFEKw7Alq0z4c' : 'https://mainnet.infura.io/0nSXv3EyFEKw7Alq0z4c';

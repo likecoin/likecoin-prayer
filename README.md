@@ -1,5 +1,7 @@
 # likecoin-prayer
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/likecoin/likecoin-prayer.svg)](https://greenkeeper.io/)
+
 > A firestore based util for batching our payments, and praying for infura/ethereum network to handle them.
 
 ## Folder structure
