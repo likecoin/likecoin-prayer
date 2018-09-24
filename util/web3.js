@@ -9,7 +9,7 @@ const publisher = require('./gcloudPub');
 const { getGasPrice } = require('./poller');
 
 const PUBSUB_TOPIC_MISC = 'misc';
-const INFURA_HOST = process.env.IS_TESTNET ? 'https://rinkeby.infura.io/0nSXv3EyFEKw7Alq0z4c' : 'https://mainnet.infura.io/0nSXv3EyFEKw7Alq0z4c';
+const INFURA_HOST = process.env.IS_TESTNET ? 'https://rinkeby.infura.io/v3/3981482524b045a2a5d4f539c07c2cc6' : 'https://mainnet.infura.io/v3/3981482524b045a2a5d4f539c07c2cc6';
 const web3 = new Web3(new Web3.providers.HttpProvider(INFURA_HOST));
 const config = require('../config/config.js');
 const accounts = require('../config/accounts.js');
