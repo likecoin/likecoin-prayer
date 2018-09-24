@@ -3,9 +3,8 @@ jobs:
   build:
     working_directory: ~/likecoin-prayer
     docker:
-      - image: node:8
+      - image: node:10
     steps:
-      - run: yarn global add npm@6.0.1
       - checkout
       - restore_cache:
           key: likecoin-prayer-{{ .Environment.CACHE_UUID }}-{{ checksum "package.json" }}-{{ checksum "package-lock.json" }}
