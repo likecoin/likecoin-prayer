@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/likecoin/likecoin-prayer#readme",
   "devDependencies": {
-    "eslint": "^5.3.0",
+    "eslint": "^5.6.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0"
   },
@@ -29,6 +29,6 @@
     "bignumber.js": "^7.2.1",
     "firebase-admin": "^6.0.0",
     "uuid": "^3.2.1",
-    "web3": "^1.0.0-beta.33"
+    "web3": "^1.0.0-beta.35"
   }
 }
