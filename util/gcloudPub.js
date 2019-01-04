@@ -1,4 +1,4 @@
-const PubSub = require('@google-cloud/pubsub');
+const { PubSub } = require('@google-cloud/pubsub');
 const uuidv4 = require('uuid/v4');
 
 const config = require('../config/config.js');
