@@ -25,6 +25,7 @@ function makeNewRecevier(wallet, user) {
     wallet,
     user,
     payoutIds: [],
+    payoutDatas: [],
     value: new BigNumber(0),
   };
 }
@@ -41,6 +42,7 @@ async function handleQuery(docs) {
       senderMap[d.to] = makeNewRecevier(d.to, d.toId);
     }
     senderMap[d.to].payoutIds.push(ref.id);
+    senderMap[d.to].payoutDatas.push(d);
     senderMap[d.to].value = senderMap[d.to].value.plus(new BigNumber(d.value));
   });
   const receivers = Object.keys(senderMap);
@@ -51,6 +53,7 @@ async function handleQuery(docs) {
       const {
         user,
         payoutIds,
+        payoutDatas,
         value,
         delegatorAccount,
       } = data;
@@ -83,6 +86,7 @@ async function handleQuery(docs) {
       });
       batch.commit();
       const currentBlock = await web3.eth.getBlockNumber();
+      const remarks = payoutDatas.map(d => d.remarks).filter(r => !!r).join('\n');
       await logPayoutTx({
         txHash,
         from: delegatorAddress,
@@ -94,7 +98,7 @@ async function handleQuery(docs) {
         nonce: pendingCount,
         rawSignedTx: tx.rawTransaction,
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
-        remarks: 'Bonus',
+        remarks: remarks || 'Bonus',
       });
       const receiverDoc = await userRef.doc(user).get();
       const {
