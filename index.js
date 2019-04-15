@@ -34,6 +34,9 @@ async function handleQuery(docs) {
   const senderMap = {};
   docs.forEach((ref) => {
     const d = ref.data();
+    if (!d.to) {
+      return; // wait for user to bind wallet
+    }
     if (!d.value) {
       console.error(`handleQuery(): ${ref.id} has no value`); // eslint-disable-line no-console
       return;
