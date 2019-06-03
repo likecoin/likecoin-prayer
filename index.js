@@ -89,7 +89,7 @@ async function handleQuery(docs) {
       });
       batch.commit();
       const currentBlock = await web3.eth.getBlockNumber();
-      const remarks = payoutDatas.map(d => d.remarks).filter(r => !!r).join('\n');
+      const remarks = payoutDatas.map(d => d.remarks).filter(r => !!r);
       await logPayoutTx({
         txHash,
         from: delegatorAddress,
@@ -101,7 +101,7 @@ async function handleQuery(docs) {
         nonce: pendingCount,
         rawSignedTx: tx.rawTransaction,
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
-        remarks: remarks || 'Bonus',
+        remarks: (remarks && remarks.length) || 'Bonus',
       });
       const receiverDoc = await userRef.doc(user).get();
       const {
