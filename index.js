@@ -101,7 +101,7 @@ async function handleQuery(docs) {
         nonce: pendingCount,
         rawSignedTx: tx.rawTransaction,
         delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
-        remarks: (remarks && remarks.length) || 'Bonus',
+        remarks: (remarks && remarks.length) ? remarks : 'Bonus',
       });
       const receiverDoc = await userRef.doc(user).get();
       const {
