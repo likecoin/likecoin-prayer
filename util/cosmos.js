@@ -33,38 +33,11 @@ function timeout(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let currentHeightNumber;
-
 async function getCurrentHeight() {
   const res = await api.get('/blocks/latest');
   const { block_meta: { header: height } } = res.data;
   return height;
 }
-
-async function updateCurrentHeight() {
-  try {
-    currentHeightNumber = await getCurrentHeight();
-  } catch (err) {
-    console.error(err);
-  }
-  setTimeout(() => updateCurrentHeight(), COSMOS_BLOCK_TIME);
-}
-updateCurrentHeight();
-
-const STATUS = {
-  // PENDING is the initial status of the transaction in database
-  PENDING: 'pending',
-
-  // SUCCESS, FAIL, TIMEOUT status will be written into database
-  SUCCESS: 'success',
-  FAIL: 'fail',
-  TIMEOUT: 'timeout',
-
-  // NOT_FOUND, MINED, CONFIRMED status will be used in this app internally only
-  NOT_FOUND: 'not found',
-  MINED: 'mined',
-  CONFIRMED: 'confirmed',
-};
 
 function createSigner(privKey) {
   const privateKey = Buffer.from(privKey, 'hex');
@@ -92,36 +65,6 @@ const {
   cosmosAddress,
   signer,
 } = createSigner(cosmosKey);
-
-async function getTransactionStatus(txHash) {
-  try {
-    const { data: networkTx } = await api.get(`/txs/${txHash}`);
-    if (!networkTx) {
-      return { status: STATUS.NOT_FOUND };
-    }
-    if (!networkTx.height) {
-      return { status: STATUS.PENDING };
-    }
-    if (!currentHeightNumber) {
-      currentHeightNumber = await getCurrentHeight();
-    }
-    if (networkTx.code && networkTx.code !== '0') {
-      console.error(`${networkTx.code}: ${networkTx.message}`); // eslint-disable-line no-console
-      return { status: STATUS.FAIL };
-    }
-    const { logs: [{ success }] } = networkTx;
-    const status = success ? STATUS.SUCCESS : STATUS.FAIL;
-    const receipt = {
-      blockNumber: parseInt(networkTx.height, 10),
-      blockHash: networkTx.txHash,
-      gasUsed: parseInt(networkTx.gas_used, 10),
-    };
-    return { status, receipt, networkTx };
-  } catch (err) {
-    console.error(err); // eslint-disable-line no-console
-    return { status: STATUS.PENDING };
-  }
-}
 
 async function resendTransaction(payload, txHash) {
   const { data } = await api.post('/txs', payload);
@@ -233,15 +176,15 @@ async function sendTransactionWithLoop(toAddress, value) {
   }
   try {
     let retryCount = 0;
+    let sequence;
     while (!txHash) {
       try {
         /* eslint-disable no-await-in-loop */
-        const { sequence } = await getAccountInfo(cosmosAddress);
-        pendingCount = parseInt(sequence, 10);
+        ({ sequence } = await getAccountInfo(cosmosAddress));
         tx = await signTransaction(toAddress, value, sequence, gas);
         txHash = await sendTransaction(tx);
       } catch (err) {
-        console.error(`Retry with sequence ${pendingCount} failed`);
+        console.error(`Retry with sequence ${sequence} failed`);
         console.error(err);
       }
       if (!txHash) {
@@ -253,6 +196,7 @@ async function sendTransactionWithLoop(toAddress, value) {
       }
     }
     await db.runTransaction(t => t.get(counterRef).then((d) => {
+      pendingCount = parseInt(sequence, 10);
       if (pendingCount + 1 > d.data().value) {
         return t.update(counterRef, {
           value: pendingCount + 1,
@@ -281,7 +225,6 @@ async function sendTransactionWithLoop(toAddress, value) {
 
 module.exports = {
   getCurrentHeight,
-  getTransactionStatus,
   resendTransaction,
   getBlockTime,
   amountToLIKE,

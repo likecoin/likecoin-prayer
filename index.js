@@ -132,7 +132,7 @@ async function handleQuery(docs) {
           fromId: delegatorAccount || delegatorAddress,
           toId: user,
           currentBlock,
-          sequence: pendingCount,
+          sequence: pendingCount.toString(),
           delegatorAddress,
           remarks: (remarks && remarks.length) ? remarks : 'Bonus',
         });
