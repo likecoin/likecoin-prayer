@@ -35,7 +35,7 @@ function timeout(ms) {
 
 async function getCurrentHeight() {
   const res = await api.get('/blocks/latest');
-  const { block_meta: { header: height } } = res.data;
+  const { block_meta: { header: { height } } } = res.data;
   return height;
 }
 
@@ -176,15 +176,15 @@ async function sendTransactionWithLoop(toAddress, value) {
   }
   try {
     let retryCount = 0;
-    let sequence;
     while (!txHash) {
       try {
         /* eslint-disable no-await-in-loop */
-        ({ sequence } = await getAccountInfo(cosmosAddress));
+        const { sequence } = await getAccountInfo(cosmosAddress);
+        pendingCount = parseInt(sequence, 10);
         tx = await signTransaction(toAddress, value, sequence, gas);
         txHash = await sendTransaction(tx);
       } catch (err) {
-        console.error(`Retry with sequence ${sequence} failed`);
+        console.error(`Retry with sequence ${pendingCount} failed`);
         console.error(err);
       }
       if (!txHash) {
@@ -196,7 +196,6 @@ async function sendTransactionWithLoop(toAddress, value) {
       }
     }
     await db.runTransaction(t => t.get(counterRef).then((d) => {
-      pendingCount = parseInt(sequence, 10);
       if (pendingCount + 1 > d.data().value) {
         return t.update(counterRef, {
           value: pendingCount + 1,
@@ -209,7 +208,7 @@ async function sendTransactionWithLoop(toAddress, value) {
       logType: 'eventCosmosError',
       fromWallet: cosmosAddress,
       txHash,
-      txSequence: pendingCount,
+      txSequence: pendingCount.toString(),
       error: err.toString(),
     });
     throw err;

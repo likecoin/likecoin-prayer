@@ -109,7 +109,8 @@ async function handleQuery(docs) {
         ({
           tx,
           txHash,
-          pendingCount, gasPrice,
+          pendingCount,
+          gasPrice,
           delegatorAddress,
         } = await sendEthTransaction(wallet, value));
       }
@@ -161,16 +162,16 @@ async function handleQuery(docs) {
         publisher.publish(PUBSUB_TOPIC_MISC, null, {
           logType: 'eventCosmosPayout',
           fromUser: delegatorAccount || delegatorAddress,
-          fromWallet: delegatorAddress,
+          fromCosmosWallet: delegatorAddress,
           toUser: user,
-          toWallet: wallet,
+          toCosmosWallet: wallet,
           toReferrer,
           toRegisterTime,
           likeAmount: value.dividedBy(ONE_LIKE).toNumber(),
           likeAmountUnitStr: value.toString(),
           txHash,
           txStatus: 'pending',
-          txSequence: pendingCount,
+          txSequence: pendingCount.toString(),
           gas,
           currentBlock,
           delegatorAddress,
