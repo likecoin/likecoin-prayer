@@ -1,19 +1,28 @@
 /* eslint-disable no-await-in-loop */
 const BigNumber = require('bignumber.js');
 const LIKECOIN = require('./constant/contract/likecoin');
-const { web3, sendTransactionWithLoop } = require('./util/web3');
+const { web3, sendTransactionWithLoop: sendEthTransactionWithLoop } = require('./util/web3');
 const {
   db,
   userCollection: userRef,
   payoutCollection: payoutRef,
 } = require('./util/firebase');
-const { logPayoutTx } = require('./util/logger');
+const {
+  logEthPayoutTx,
+  logCosmosPayoutTx,
+} = require('./util/logger');
 const publisher = require('./util/gcloudPub');
 const config = require('./config/config.js');
 const { startPoller } = require('./util/poller');
+const {
+  getCurrentHeight,
+  isCosmosWallet,
+  sendTransactionWithLoop: sendCosmosTransaction,
+} = require('./util/cosmos');
 
 const PUBSUB_TOPIC_MISC = 'misc';
 const ONE_LIKE = new BigNumber(10).pow(18);
+const ONE_COSMOS_LIKE = new BigNumber(10).pow(9);
 const LikeCoin = new web3.eth.Contract(LIKECOIN.LIKE_COIN_ABI, LIKECOIN.LIKE_COIN_ADDRESS);
 
 function timeout(ms) {
@@ -28,6 +37,15 @@ function makeNewRecevier(wallet, user) {
     payoutDatas: [],
     value: new BigNumber(0),
   };
+}
+
+function sendEthTransaction(wallet, value) {
+  const methodCall = LikeCoin.methods.transfer(wallet, value);
+  const txData = methodCall.encodeABI();
+  return sendEthTransactionWithLoop(
+    LIKECOIN.LIKE_COIN_ADDRESS,
+    txData,
+  );
 }
 
 async function handleQuery(docs) {
@@ -70,61 +88,113 @@ async function handleQuery(docs) {
           txHash: 'pending',
         });
       }))));
-      const methodCall = LikeCoin.methods.transfer(wallet, value);
-      const txData = methodCall.encodeABI();
-      const {
-        tx,
-        txHash,
-        pendingCount,
-        gasPrice,
-        delegatorAddress,
-      } = await sendTransactionWithLoop(
-        LIKECOIN.LIKE_COIN_ADDRESS,
-        txData,
-      );
+
+      const isCosmos = isCosmosWallet(wallet);
+      let tx;
+      let txHash;
+      let pendingCount;
+      let gasPrice;
+      let gas;
+      let delegatorAddress;
+      if (isCosmos) {
+        const cosmosValue = value.dividedBy(ONE_LIKE).times(ONE_COSMOS_LIKE);
+        ({
+          tx,
+          txHash,
+          pendingCount,
+          gas,
+          delegatorAddress,
+        } = await sendCosmosTransaction(wallet, cosmosValue.toFixed()));
+      } else {
+        ({
+          tx,
+          txHash,
+          pendingCount,
+          gasPrice,
+          delegatorAddress,
+        } = await sendEthTransaction(wallet, value));
+      }
+
       const batch = db.batch();
       payoutIds.forEach((payoutId) => {
         const ref = payoutRef.doc(payoutId);
         batch.update(ref, { txHash });
       });
       batch.commit();
-      const currentBlock = await web3.eth.getBlockNumber();
       const remarks = payoutDatas.map(d => d.remarks).filter(r => !!r);
-      await logPayoutTx({
-        txHash,
-        from: delegatorAddress,
-        to: wallet,
-        value: value.toString(),
-        fromId: delegatorAccount || delegatorAddress,
-        toId: user,
-        currentBlock,
-        nonce: pendingCount,
-        rawSignedTx: tx.rawTransaction,
-        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
-        remarks: (remarks && remarks.length) ? remarks : 'Bonus',
-      });
+      let currentBlock;
+      if (isCosmos) {
+        currentBlock = await getCurrentHeight();
+        await logCosmosPayoutTx({
+          txHash,
+          from: delegatorAddress,
+          to: wallet,
+          value: value.toString(),
+          fromId: delegatorAccount || delegatorAddress,
+          toId: user,
+          currentBlock,
+          sequence: pendingCount.toString(),
+          delegatorAddress,
+          remarks: (remarks && remarks.length) ? remarks : 'Bonus',
+        });
+      } else {
+        currentBlock = await web3.eth.getBlockNumber();
+        await logEthPayoutTx({
+          txHash,
+          from: delegatorAddress,
+          to: wallet,
+          value: value.toString(),
+          fromId: delegatorAccount || delegatorAddress,
+          toId: user,
+          currentBlock,
+          nonce: pendingCount,
+          rawSignedTx: tx.rawTransaction,
+          delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
+          remarks: (remarks && remarks.length) ? remarks : 'Bonus',
+        });
+      }
       const receiverDoc = await userRef.doc(user).get();
       const {
         referrer: toReferrer,
         timestamp: toRegisterTime,
       } = receiverDoc.data();
-      publisher.publish(PUBSUB_TOPIC_MISC, null, {
-        logType: 'eventPayout',
-        fromUser: delegatorAccount || delegatorAddress,
-        fromWallet: delegatorAddress,
-        toUser: user,
-        toWallet: wallet,
-        toReferrer,
-        toRegisterTime,
-        likeAmount: value.dividedBy(ONE_LIKE).toNumber(),
-        likeAmountUnitStr: value.toString(),
-        txHash,
-        txStatus: 'pending',
-        txNonce: pendingCount,
-        gasPrice,
-        currentBlock,
-        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
-      });
+      if (isCosmos) {
+        publisher.publish(PUBSUB_TOPIC_MISC, null, {
+          logType: 'eventCosmosPayout',
+          fromUser: delegatorAccount || delegatorAddress,
+          fromCosmosWallet: delegatorAddress,
+          toUser: user,
+          toCosmosWallet: wallet,
+          toReferrer,
+          toRegisterTime,
+          likeAmount: value.dividedBy(ONE_LIKE).toNumber(),
+          likeAmountUnitStr: value.toString(),
+          txHash,
+          txStatus: 'pending',
+          txSequence: pendingCount.toString(),
+          gas,
+          currentBlock,
+          delegatorAddress,
+        });
+      } else {
+        publisher.publish(PUBSUB_TOPIC_MISC, null, {
+          logType: 'eventPayout',
+          fromUser: delegatorAccount || delegatorAddress,
+          fromWallet: delegatorAddress,
+          toUser: user,
+          toWallet: wallet,
+          toReferrer,
+          toRegisterTime,
+          likeAmount: value.dividedBy(ONE_LIKE).toNumber(),
+          likeAmountUnitStr: value.toString(),
+          txHash,
+          txStatus: 'pending',
+          txNonce: pendingCount,
+          gasPrice,
+          currentBlock,
+          delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
+        });
+      }
     } catch (err) {
       console.error('handleQuery()', err); // eslint-disable-line no-console
     }
