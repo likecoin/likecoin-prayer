@@ -109,6 +109,13 @@ function getTransactionGas() {
   return COSMOS_GAS;
 }
 
+function createTransactionPayload(tx) {
+  return {
+    tx,
+    mode: 'sync',
+  };
+}
+
 async function sendTransaction(payload) {
   const res = await api.post('/txs', payload);
   if (res.data.code) {
@@ -174,10 +181,7 @@ async function sendTransactionWithLoop(toAddress, value) {
   });
   tx = await signTransaction(toAddress, value, pendingCount.toString(), gas);
   try {
-    payload = {
-      tx,
-      mode: 'sync',
-    };
+    payload = createTransactionPayload(tx);
     txHash = await sendTransaction(payload);
   } catch (err) {
     console.log(`Sequence ${pendingCount} failed, trying to get account info sequence`);
@@ -191,10 +195,7 @@ async function sendTransactionWithLoop(toAddress, value) {
         const { sequence } = await getAccountInfo(cosmosAddress);
         pendingCount = parseInt(sequence, 10);
         tx = await signTransaction(toAddress, value, sequence, gas);
-        payload = {
-          tx,
-          mode: 'sync',
-        };
+        payload = createTransactionPayload(tx);
         txHash = await sendTransaction(payload);
       } catch (err) {
         console.error(`Retry with sequence ${pendingCount} failed`);
