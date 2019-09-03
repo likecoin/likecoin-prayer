@@ -18,6 +18,7 @@ const {
   getCurrentHeight,
   isCosmosWallet,
   sendTransactionWithLoop: sendCosmosTransaction,
+  LIKEToAmount,
 } = require('./util/cosmos');
 
 const PUBSUB_TOPIC_MISC = 'misc';
@@ -96,14 +97,16 @@ async function handleQuery(docs) {
       let gasPrice;
       let gas;
       let delegatorAddress;
+      let payload;
+      let cosmosValue;
       if (isCosmos) {
-        const cosmosValue = value.dividedBy(ONE_LIKE).times(ONE_COSMOS_LIKE);
+        cosmosValue = value.dividedBy(ONE_LIKE).times(ONE_COSMOS_LIKE);
         ({
-          tx,
           txHash,
           pendingCount,
           gas,
           delegatorAddress,
+          payload,
         } = await sendCosmosTransaction(wallet, cosmosValue.toFixed()));
       } else {
         ({
@@ -129,11 +132,12 @@ async function handleQuery(docs) {
           txHash,
           from: delegatorAddress,
           to: wallet,
-          value: value.toString(),
+          amount: LIKEToAmount(cosmosValue.toFixed()),
           fromId: delegatorAccount || delegatorAddress,
           toId: user,
           currentBlock,
           sequence: pendingCount.toString(),
+          rawPayload: JSON.stringify(payload),
           delegatorAddress,
           remarks: (remarks && remarks.length) ? remarks : 'Bonus',
         });

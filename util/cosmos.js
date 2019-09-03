@@ -86,6 +86,13 @@ function amountToLIKE(likecoin) {
   return -1;
 }
 
+function LIKEToAmount(amount) {
+  return {
+    denom: 'nanolike',
+    amount,
+  };
+}
+
 function isCosmosWallet(wallet) {
   return wallet.startsWith('cosmos');
 }
@@ -102,11 +109,15 @@ function getTransactionGas() {
   return COSMOS_GAS;
 }
 
-async function sendTransaction(tx) {
-  const res = await api.post('/txs', {
+function createTransactionPayload(tx) {
+  return {
     tx,
     mode: 'sync',
-  });
+  };
+}
+
+async function sendTransaction(payload) {
+  const res = await api.post('/txs', payload);
   if (res.data.code) {
     throw new Error(res.data.raw_log);
   }
@@ -159,6 +170,7 @@ async function sendTransactionWithLoop(toAddress, value) {
   const RETRY_LIMIT = 10;
   let txHash;
   let tx;
+  let payload;
   const gas = getTransactionGas();
   const counterRef = txLogRef.doc(`!counter_${cosmosAddress}`);
   let pendingCount = await db.runTransaction(async (t) => {
@@ -169,7 +181,8 @@ async function sendTransactionWithLoop(toAddress, value) {
   });
   tx = await signTransaction(toAddress, value, pendingCount.toString(), gas);
   try {
-    txHash = await sendTransaction(tx);
+    payload = createTransactionPayload(tx);
+    txHash = await sendTransaction(payload);
   } catch (err) {
     console.log(`Sequence ${pendingCount} failed, trying to get account info sequence`);
     console.error(err);
@@ -182,7 +195,8 @@ async function sendTransactionWithLoop(toAddress, value) {
         const { sequence } = await getAccountInfo(cosmosAddress);
         pendingCount = parseInt(sequence, 10);
         tx = await signTransaction(toAddress, value, sequence, gas);
-        txHash = await sendTransaction(tx);
+        payload = createTransactionPayload(tx);
+        txHash = await sendTransaction(payload);
       } catch (err) {
         console.error(`Retry with sequence ${pendingCount} failed`);
         console.error(err);
@@ -219,6 +233,7 @@ async function sendTransactionWithLoop(toAddress, value) {
     gas,
     delegatorAddress: cosmosAddress,
     pendingCount,
+    payload,
   };
 }
 
@@ -227,6 +242,7 @@ module.exports = {
   resendTransaction,
   getBlockTime,
   amountToLIKE,
+  LIKEToAmount,
   isCosmosWallet,
   sendTransactionWithLoop,
 };
