@@ -94,7 +94,7 @@ async function handleQuery(docs) {
         txHash,
         from: delegatorAddress,
         to: wallet,
-        value: value.toString(),
+        value: value.toFixed(),
         fromId: delegatorAccount || delegatorAddress,
         toId: user,
         currentBlock,
