@@ -17,7 +17,7 @@ const publisher = require('./gcloudPub');
 const PUBSUB_TOPIC_MISC = 'misc';
 const {
   COSMOS_LCD_ENDPOINT,
-  COSMOS_BLOCK_TIME = 5000,
+  COSMOS_BLOCK_TIME = 6000,
   COSMOS_GAS = '200000',
   COSMOS_DENOM = 'nanolike',
   COSMOS_CHAIN_ID = '',
@@ -175,6 +175,10 @@ async function sendTransactionWithLoop(toAddress, value) {
   const counterRef = txLogRef.doc(`!counter_${cosmosAddress}`);
   let pendingCount = await db.runTransaction(async (t) => {
     const d = await t.get(counterRef);
+    if (!d.data()) {
+      await t.create(counterRef, { value: 1 });
+      return 0;
+    }
     const v = d.data().value + 1;
     await t.update(counterRef, { value: v });
     return d.data().value;
