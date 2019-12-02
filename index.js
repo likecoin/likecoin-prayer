@@ -1,20 +1,26 @@
 /* eslint-disable no-await-in-loop */
 const BigNumber = require('bignumber.js');
-const LIKECOIN = require('./constant/contract/likecoin');
-const { web3, sendTransactionWithLoop } = require('./util/web3');
 const {
   db,
   userCollection: userRef,
   payoutCollection: payoutRef,
 } = require('./util/firebase');
-const { logPayoutTx } = require('./util/logger');
+const {
+  logCosmosPayoutTx,
+} = require('./util/logger');
 const publisher = require('./util/gcloudPub');
 const config = require('./config/config.js');
 const { startPoller } = require('./util/poller');
+const {
+  getCurrentHeight,
+  isCosmosWallet,
+  sendTransactionWithLoop: sendCosmosTransaction,
+  LIKEToAmount,
+} = require('./util/cosmos');
 
 const PUBSUB_TOPIC_MISC = 'misc';
 const ONE_LIKE = new BigNumber(10).pow(18);
-const LikeCoin = new web3.eth.Contract(LIKECOIN.LIKE_COIN_ABI, LIKECOIN.LIKE_COIN_ADDRESS);
+const ONE_COSMOS_LIKE = new BigNumber(10).pow(9);
 
 function timeout(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -70,37 +76,40 @@ async function handleQuery(docs) {
           txHash: 'pending',
         });
       }))));
-      const methodCall = LikeCoin.methods.transfer(wallet, value);
-      const txData = methodCall.encodeABI();
+
+      const isCosmos = isCosmosWallet(wallet);
+      if (!isCosmos) {
+        console.error(`dangling tx to eth wallet ${wallet}`);
+        return;
+      }
+      const cosmosValue = value.dividedBy(ONE_LIKE).times(ONE_COSMOS_LIKE);
       const {
-        tx,
         txHash,
         pendingCount,
-        gasPrice,
+        gas,
         delegatorAddress,
-      } = await sendTransactionWithLoop(
-        LIKECOIN.LIKE_COIN_ADDRESS,
-        txData,
-      );
+        payload,
+      } = await sendCosmosTransaction(wallet, cosmosValue.toFixed());
+
       const batch = db.batch();
       payoutIds.forEach((payoutId) => {
         const ref = payoutRef.doc(payoutId);
         batch.update(ref, { txHash });
       });
       batch.commit();
-      const currentBlock = await web3.eth.getBlockNumber();
       const remarks = payoutDatas.map(d => d.remarks).filter(r => !!r);
-      await logPayoutTx({
+      const currentBlock = await getCurrentHeight();
+      await logCosmosPayoutTx({
         txHash,
         from: delegatorAddress,
         to: wallet,
-        value: value.toFixed(),
+        amount: LIKEToAmount(cosmosValue.toFixed()),
         fromId: delegatorAccount || delegatorAddress,
         toId: user,
         currentBlock,
-        nonce: pendingCount,
-        rawSignedTx: tx.rawTransaction,
-        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
+        sequence: pendingCount.toString(),
+        rawPayload: JSON.stringify(payload),
+        delegatorAddress,
         remarks: (remarks && remarks.length) ? remarks : 'Bonus',
       });
       const receiverDoc = await userRef.doc(user).get();
@@ -109,21 +118,21 @@ async function handleQuery(docs) {
         timestamp: toRegisterTime,
       } = receiverDoc.data();
       publisher.publish(PUBSUB_TOPIC_MISC, null, {
-        logType: 'eventPayout',
+        logType: 'eventCosmosPayout',
         fromUser: delegatorAccount || delegatorAddress,
-        fromWallet: delegatorAddress,
+        fromCosmosWallet: delegatorAddress,
         toUser: user,
-        toWallet: wallet,
+        toCosmosWallet: wallet,
         toReferrer,
         toRegisterTime,
         likeAmount: value.dividedBy(ONE_LIKE).toNumber(),
         likeAmountUnitStr: value.toString(),
         txHash,
         txStatus: 'pending',
-        txNonce: pendingCount,
-        gasPrice,
+        txSequence: pendingCount.toString(),
+        gas,
         currentBlock,
-        delegatorAddress: web3.utils.toChecksumAddress(delegatorAddress),
+        delegatorAddress,
       });
     } catch (err) {
       console.error('handleQuery()', err); // eslint-disable-line no-console

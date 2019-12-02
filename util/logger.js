@@ -1,6 +1,6 @@
 const dbRef = require('../util/firebase').txCollection;
 
-async function logPayoutTx(payload) {
+async function logEthPayoutTx(payload) {
   const { txHash } = payload;
   try {
     await dbRef.doc(txHash).create({
@@ -10,8 +10,26 @@ async function logPayoutTx(payload) {
       ...payload,
     });
   } catch (err) {
-    console.error('logPayoutTx():', err); // eslint-disable-line no-console
+    console.error('logEthPayoutTx():', err); // eslint-disable-line no-console
   }
 }
 
-module.exports = { logPayoutTx };
+async function logCosmosPayoutTx(payload) {
+  const { txHash } = payload;
+  try {
+    await dbRef.doc(txHash).create({
+      type: 'cosmosPayout',
+      status: 'pending',
+      ts: Date.now(),
+      remarks: payload.memo,
+      ...payload,
+    });
+  } catch (err) {
+    console.error('logCosmosPayoutTx():', err); // eslint-disable-line no-console
+  }
+}
+
+module.exports = {
+  logEthPayoutTx,
+  logCosmosPayoutTx,
+};
