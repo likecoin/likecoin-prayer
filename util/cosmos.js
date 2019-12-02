@@ -24,7 +24,7 @@ const {
 } = config;
 
 const api = axios.create({
-  baseURL: `http://${COSMOS_LCD_ENDPOINT}`,
+  baseURL: COSMOS_LCD_ENDPOINT,
   httpAgent: new http.Agent({ keepAlive: true }),
   httpsAgent: new https.Agent({ keepAlive: true }),
 });
