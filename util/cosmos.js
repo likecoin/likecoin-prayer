@@ -27,6 +27,7 @@ const api = axios.create({
   baseURL: COSMOS_LCD_ENDPOINT,
   httpAgent: new http.Agent({ keepAlive: true }),
   httpsAgent: new https.Agent({ keepAlive: true }),
+  timeout: 30000,
 });
 
 function timeout(ms) {
@@ -98,11 +99,8 @@ function isCosmosWallet(wallet) {
 }
 
 async function getAccountInfo(address) {
-  const res = await api.get(`/auth/accounts/${address}`);
-  if (res.status !== 200) {
-    throw new Error(`Response failed with status ${res.status}: ${res.statusText}`);
-  }
-  return res.data.value;
+  const { data } = await api.get(`/auth/accounts/${address}`);
+  return data.result.value;
 }
 
 function getTransactionGas() {
