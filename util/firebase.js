@@ -16,7 +16,6 @@ if (process.env.CI) {
   });
 
   const db = admin.firestore();
-  db.settings({ timestampsInSnapshots: true });
   const userCollection = db.collection(config.FIRESTORE_USER_ROOT);
   const txCollection = db.collection(config.FIRESTORE_TX_ROOT);
   const payoutCollection = db.collection(config.FIRESTORE_PAYOUT_ROOT);
