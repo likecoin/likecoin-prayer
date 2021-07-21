@@ -1,10 +1,7 @@
-const axios = require('axios');
-const http = require('http');
-const https = require('https');
-const crypto = require('crypto');
-const secp256k1 = require('secp256k1');
-const bech32 = require('bech32');
-const jsonStringify = require('fast-json-stable-stringify');
+const { MsgSend } = require('cosmjs-types/cosmos/bank/v1beta1/tx');
+const { assertIsBroadcastTxSuccess, SigningStargateClient, StargateClient } = require('@cosmjs/stargate');
+// eslint-disable-next-line import/no-extraneous-dependencies
+const { TxRaw, DirectSecp256k1Wallet } = require('@cosmjs/proto-signing');
 
 const { privKey: cosmosKey } = require('../config/cosmos.json'); // 32-byte, 64-digit hex str
 const config = require('../config/config.js');
@@ -20,62 +17,48 @@ const {
   COSMOS_BLOCK_TIME = 6000,
   COSMOS_GAS = '200000',
   COSMOS_DENOM = 'nanolike',
-  COSMOS_CHAIN_ID = '',
+  COSMOS_GAS_PRICE = 1000,
 } = config;
 
-const api = axios.create({
-  baseURL: COSMOS_LCD_ENDPOINT,
-  httpAgent: new http.Agent({ keepAlive: true }),
-  httpsAgent: new https.Agent({ keepAlive: true }),
-  timeout: 30000,
-});
+let queryClient;
+async function getQueryClient() {
+  if (!queryClient) queryClient = await StargateClient.connect(COSMOS_LCD_ENDPOINT);
+  return queryClient;
+}
+
+let signingWallet;
+async function getSigningWallet(privKey = cosmosKey) {
+  if (!signingWallet) {
+    const privateKeyBytes = Buffer.from(privKey, 'hex');
+    const senderWallet = await DirectSecp256k1Wallet.fromKey(privateKeyBytes);
+    const [firstAccount] = await senderWallet.getAccounts();
+    const senderAddress = firstAccount.address;
+    const senderClient = await SigningStargateClient.connectWithSigner(
+      COSMOS_LCD_ENDPOINT,
+      senderWallet,
+    );
+    signingWallet = {
+      cosmosAddress: senderAddress,
+      signer: senderClient,
+    };
+  }
+  return signingWallet;
+}
 
 function timeout(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function getCurrentHeight() {
-  const res = await api.get('/blocks/latest');
-  const { block_meta: { header: { height } } } = res.data;
-  return height;
-}
-
-function createSigner(privKey) {
-  const privateKey = Buffer.from(privKey, 'hex');
-  const publicKey = secp256k1.publicKeyCreate(privateKey, true);
-  const sha256 = crypto.createHash('sha256');
-  const ripemd = crypto.createHash('ripemd160');
-  sha256.update(publicKey);
-  ripemd.update(sha256.digest());
-  const rawAddr = ripemd.digest();
-  const cosmosAddress = bech32.encode('cosmos', bech32.toWords(rawAddr));
-  const signer = (msg) => {
-    const msgSha256 = crypto.createHash('sha256');
-    msgSha256.update(Buffer.from(msg, 'utf-8'));
-    const msgHash = msgSha256.digest();
-    const { signature } = secp256k1.sign(msgHash, privateKey);
-    return { signature, publicKey };
-  };
-  return {
-    cosmosAddress,
-    signer,
-  };
-}
-
-const {
-  cosmosAddress,
-  signer,
-} = createSigner(cosmosKey);
-
-async function resendTransaction(payload, txHash) {
-  const { data } = await api.post('/txs', payload);
-  const { txhash } = data;
-  return txhash === txHash;
+  const client = await getQueryClient();
+  const res = await client.getBlock();
+  return res.header.height;
 }
 
 async function getBlockTime(blockNumber) {
-  const { data } = await api.get(`/blocks/${blockNumber}`);
-  const { block_meta: { header: { time } } } = data;
+  const client = await getQueryClient();
+  const res = await client.getBlock(blockNumber);
+  const { time } = res.header;
   return (new Date(time)).getTime();
 }
 
@@ -99,72 +82,54 @@ function isCosmosWallet(wallet) {
 }
 
 async function getAccountInfo(address) {
-  const { data } = await api.get(`/auth/accounts/${address}`);
-  return data.result.value;
+  const client = await getQueryClient();
+  const res = await client.getAccount(address);
+  return res;
 }
 
 function getTransactionGas() {
   return COSMOS_GAS;
 }
 
-function createTransactionPayload(tx) {
+function getTransactionFee(gas) {
+  const price = Number.parseFloat(COSMOS_GAS_PRICE) * Number.parseInt(gas, 10);
   return {
-    tx,
-    mode: 'sync',
+    amount: price.toFixed(0),
+    denom: COSMOS_DENOM,
   };
 }
 
-async function sendTransaction(payload) {
-  const res = await api.post('/txs', payload);
-  if (res.data.code) {
-    throw new Error(res.data.raw_log);
-  }
-  return res.data.txhash;
-}
-
-async function signTransaction(toAddress, value, sequence, gas) {
-  const msgSend = {
-    type: 'cosmos-sdk/MsgSend',
-    value: {
-      from_address: cosmosAddress,
-      to_address: toAddress,
-      amount: [{ denom: COSMOS_DENOM, amount: value.toString() }],
-    },
-  };
-  const stdTx = {
-    msg: [msgSend],
-    fee: {
-      amount: null,
-      gas,
-    },
-    memo: '',
-  };
-  const { account_number: accountNumber } = await getAccountInfo(cosmosAddress);
-  const signMessage = jsonStringify({
-    fee: {
-      amount: [],
-      gas,
-    },
-    msgs: stdTx.msg,
-    chain_id: COSMOS_CHAIN_ID,
-    account_number: accountNumber,
-    sequence,
-    memo: stdTx.memo,
+async function sendTransaction(toAddress, value, sequence, gas) {
+  const { cosmosAddress, signer } = await getSigningWallet();
+  const msgSend = MsgSend.fromPartial({
+    from_address: cosmosAddress,
+    to_address: toAddress,
+    amount: [{ denom: COSMOS_DENOM, amount: value.toString() }],
   });
-  const { signature, publicKey } = signer(signMessage);
-  stdTx.signatures = [{
-    signature: signature.toString('base64'),
-    account_number: accountNumber,
-    sequence,
-    pub_key: {
-      type: 'tendermint/PubKeySecp256k1',
-      value: publicKey.toString('base64'),
-    },
-  }];
-  return stdTx;
+
+  const msgs = {
+    typeUrl: '/cosmos.bank.v1beta1.MsgSend',
+    value: msgSend,
+  };
+
+  const { accountNumber } = await getAccountInfo(cosmosAddress);
+
+  const feeAmount = getTransactionFee(gas);
+  const fee = {
+    amount: feeAmount.amount === 0 ? [] : [feeAmount],
+    gas,
+  };
+
+  const chainId = await this.getChainId();
+  const signed = await signer.sign(cosmosAddress, [msgs], fee, '', { accountNumber, chainId, sequence });
+
+  const result = await signer.broadcastTx(Uint8Array.from(TxRaw.encode(signed).finish()));
+  assertIsBroadcastTxSuccess(result);
+  return result.transactionHash;
 }
 
 async function sendTransactionWithLoop(toAddress, value) {
+  const { cosmosAddress } = await getSigningWallet();
   const RETRY_LIMIT = 10;
   let txHash;
   let tx;
@@ -181,10 +146,8 @@ async function sendTransactionWithLoop(toAddress, value) {
     await t.update(counterRef, { value: v });
     return d.data().value;
   });
-  tx = await signTransaction(toAddress, value, pendingCount.toString(), gas);
   try {
-    payload = createTransactionPayload(tx);
-    txHash = await sendTransaction(payload);
+    txHash = await sendTransaction(toAddress, value, pendingCount.toString(), gas);
   } catch (err) {
     console.log(`Sequence ${pendingCount} failed, trying to get account info sequence`);
     console.error(err);
@@ -196,9 +159,7 @@ async function sendTransactionWithLoop(toAddress, value) {
         /* eslint-disable no-await-in-loop */
         const { sequence } = await getAccountInfo(cosmosAddress);
         pendingCount = parseInt(sequence, 10);
-        tx = await signTransaction(toAddress, value, sequence, gas);
-        payload = createTransactionPayload(tx);
-        txHash = await sendTransaction(payload);
+        tx = await sendTransaction(toAddress, value, sequence, gas);
       } catch (err) {
         console.error(`Retry with sequence ${pendingCount} failed`);
         console.error(err);
@@ -241,7 +202,6 @@ async function sendTransactionWithLoop(toAddress, value) {
 
 module.exports = {
   getCurrentHeight,
-  resendTransaction,
   getBlockTime,
   amountToLIKE,
   LIKEToAmount,
