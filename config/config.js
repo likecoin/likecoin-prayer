@@ -17,5 +17,6 @@ config.COSMOS_CHAIN_ID = '';
 config.COSMOS_DENOM = 'nanolike';
 config.COSMOS_BLOCK_TIME = 5000;
 config.COSMOS_GAS = '200000';
+config.COSMOS_GAS_PRICE = '1000';
 
 module.exports = config;
