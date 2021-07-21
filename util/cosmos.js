@@ -102,8 +102,8 @@ function getTransactionFee(gas) {
 async function sendTransaction(toAddress, value, sequence, gas) {
   const { cosmosAddress, signer } = await getSigningWallet();
   const msgSend = MsgSend.fromPartial({
-    from_address: cosmosAddress,
-    to_address: toAddress,
+    fromAddress: cosmosAddress,
+    toAddress: toAddress,
     amount: [{ denom: COSMOS_DENOM, amount: value.toString() }],
   });
 
