@@ -1,7 +1,8 @@
 const { MsgSend } = require('cosmjs-types/cosmos/bank/v1beta1/tx');
+const { TxRaw } = require('cosmjs-types/cosmos/tx/v1beta1/tx');
 const { assertIsBroadcastTxSuccess, SigningStargateClient, StargateClient } = require('@cosmjs/stargate');
 // eslint-disable-next-line import/no-extraneous-dependencies
-const { TxRaw, DirectSecp256k1Wallet } = require('@cosmjs/proto-signing');
+const { DirectSecp256k1Wallet } = require('@cosmjs/proto-signing');
 
 const { privKey: cosmosKey } = require('../config/cosmos.json'); // 32-byte, 64-digit hex str
 const config = require('../config/config.js');
