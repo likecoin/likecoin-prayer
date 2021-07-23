@@ -125,7 +125,9 @@ async function sendTransaction(toAddress, value, sequence, gas) {
   const signed = await signer.sign(cosmosAddress, [msgs], fee, '', { accountNumber, chainId, sequence });
 
   const result = await signer.broadcastTx(Uint8Array.from(TxRaw.encode(signed).finish()));
-  assertIsBroadcastTxSuccess(result);
+  if ('code' in result && result.code) {
+    throw new Error(result.rawLog);
+  }
   return result.transactionHash;
 }
 
