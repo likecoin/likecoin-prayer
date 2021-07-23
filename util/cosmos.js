@@ -135,7 +135,6 @@ async function sendTransactionWithLoop(toAddress, value) {
   const { cosmosAddress } = await getSigningWallet();
   const RETRY_LIMIT = 10;
   let txHash;
-  let tx;
   let payload;
   const gas = getTransactionGas();
   const counterRef = txLogRef.doc(`!counter_${cosmosAddress}`);
@@ -194,7 +193,6 @@ async function sendTransactionWithLoop(toAddress, value) {
     throw err;
   }
   return {
-    tx,
     txHash,
     gas,
     delegatorAddress: cosmosAddress,

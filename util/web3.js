@@ -60,7 +60,7 @@ async function sendTransactionWithLoop(addr, txData) {
   let retryCount = 0;
   let retry = false;
   let txHash;
-  let tx;
+  let tx = {};
   let networkGas = await web3.eth.getGasPrice();
   networkGas = BigNumber.max(networkGas, '1500000000'); // min 1.5gwei
   const gasPrice = BigNumber.min(getGasPrice(), networkGas).toString();
@@ -118,7 +118,6 @@ async function sendTransactionWithLoop(addr, txData) {
     throw err;
   }
   return {
-    tx,
     txHash,
     gasPrice,
     delegatorAddress: address,
