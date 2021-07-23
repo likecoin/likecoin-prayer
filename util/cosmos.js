@@ -162,7 +162,7 @@ async function sendTransactionWithLoop(toAddress, value) {
         /* eslint-disable no-await-in-loop */
         const { sequence } = await getAccountInfo(cosmosAddress);
         pendingCount = parseInt(sequence, 10);
-        tx = await sendTransaction(toAddress, value, sequence, gas);
+        txHash = await sendTransaction(toAddress, value, sequence, gas);
       } catch (err) {
         console.error(`Retry with sequence ${pendingCount} failed`);
         console.error(err);
