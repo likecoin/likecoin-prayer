@@ -1,6 +1,6 @@
 const { MsgSend } = require('cosmjs-types/cosmos/bank/v1beta1/tx');
 const { TxRaw } = require('cosmjs-types/cosmos/tx/v1beta1/tx');
-const { assertIsBroadcastTxSuccess, SigningStargateClient, StargateClient } = require('@cosmjs/stargate');
+const { SigningStargateClient, StargateClient } = require('@cosmjs/stargate');
 // eslint-disable-next-line import/no-extraneous-dependencies
 const { DirectSecp256k1Wallet } = require('@cosmjs/proto-signing');
 
@@ -104,7 +104,7 @@ async function sendTransaction(toAddress, value, sequence, gas) {
   const { cosmosAddress, signer } = await getSigningWallet();
   const msgSend = MsgSend.fromPartial({
     fromAddress: cosmosAddress,
-    toAddress: toAddress,
+    toAddress,
     amount: [{ denom: COSMOS_DENOM, amount: value.toString() }],
   });
 
@@ -121,7 +121,7 @@ async function sendTransaction(toAddress, value, sequence, gas) {
     gas,
   };
 
-  const chainId = await this.getChainId();
+  const chainId = await signer.getChainId();
   const signed = await signer.sign(cosmosAddress, [msgs], fee, '', { accountNumber, chainId, sequence });
 
   const result = await signer.broadcastTx(Uint8Array.from(TxRaw.encode(signed).finish()));
