@@ -14,7 +14,7 @@ const publisher = require('./gcloudPub');
 
 const PUBSUB_TOPIC_MISC = 'misc';
 const {
-  COSMOS_LCD_ENDPOINT,
+  COSMOS_RPC_ENDPOINT,
   COSMOS_BLOCK_TIME = 6000,
   COSMOS_GAS = '200000',
   COSMOS_DENOM = 'nanolike',
@@ -23,7 +23,7 @@ const {
 
 let queryClient;
 async function getQueryClient() {
-  if (!queryClient) queryClient = await StargateClient.connect(COSMOS_LCD_ENDPOINT);
+  if (!queryClient) queryClient = await StargateClient.connect(COSMOS_RPC_ENDPOINT);
   return queryClient;
 }
 
@@ -35,7 +35,7 @@ async function getSigningWallet(privKey = cosmosKey) {
     const [firstAccount] = await senderWallet.getAccounts();
     const senderAddress = firstAccount.address;
     const senderClient = await SigningStargateClient.connectWithSigner(
-      COSMOS_LCD_ENDPOINT,
+      COSMOS_RPC_ENDPOINT,
       senderWallet,
     );
     signingWallet = {
