@@ -26,13 +26,13 @@
   },
   "dependencies": {
     "@cosmjs/stargate": "^0.25.5",
-    "@google-cloud/pubsub": "^1.2.0",
+    "@google-cloud/pubsub": "^2.0.0",
     "axios": "^0.21.1",
     "bech32": "^1.1.3",
     "bignumber.js": "^7.2.1",
     "cosmjs-types": "^0.1.0",
     "fast-json-stable-stringify": "^2.0.0",
-    "firebase-admin": "^8.8.0",
+    "firebase-admin": "^10.0.2",
     "secp256k1": "^3.7.1",
     "uuid": "^3.2.1",
     "web3": "^1.0.0-beta.35"
