@@ -25,7 +25,7 @@
     "eslint-plugin-import": "^2.14.0"
   },
   "dependencies": {
-    "@cosmjs/stargate": "^0.25.5",
+    "@cosmjs/stargate": "^0.28.6",
     "@google-cloud/pubsub": "^1.2.0",
     "axios": "^0.21.1",
     "bech32": "^1.1.3",
